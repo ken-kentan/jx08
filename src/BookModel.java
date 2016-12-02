@@ -1,31 +1,28 @@
 import java.io.BufferedReader;
-import java.io.BufferedWriter;
 import java.io.FileReader;
 import java.io.FileWriter;
-import java.util.HashMap;
-import java.util.Map;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
 
 
-public class BookModel {
-	final String BOOK_TXT_PATH = "./book.txt";
-	
-	private enum INFO{NAME, AUTHOR, PUBLISHER, ISBN};
+class BookModel {
+	private final String BOOK_TXT_PATH = "./book.txt";
 	
 	//keyはISBN
-	private Map<String, String> bookNameMap = new HashMap<>();
-	private Map<String, String> bookAuthorMap = new HashMap<>();
-	private Map<String, String> bookPublisherMap = new HashMap<>();
+	private List<Book> bookList = new ArrayList<>();
+	private List<Book> bookSearchedList = new ArrayList<>();
+	private List<String> bookISBNList = new ArrayList<>();
 	
 	BookModel(){
-		readBookInfos();
+		readBookInfo();
 	}
 
-	private void readBookInfos(){
+	private void readBookInfo(){
 		BufferedReader reader;
-		
-		bookNameMap.clear();
-		bookAuthorMap.clear();
-		bookPublisherMap.clear();
+
+		bookList.clear();
+		bookISBNList.clear();
 		
 		try {
 			reader = new BufferedReader(new FileReader(BOOK_TXT_PATH));
@@ -34,36 +31,67 @@ public class BookModel {
 			
 			String line;
 			while((line = reader.readLine()) != null){
-				String[] bookInfo = line.split(",", 4);
-				
-				if(bookInfo.length == 4){
-					bookNameMap.put(bookInfo[3], bookInfo[0]);
-					bookAuthorMap.put(bookInfo[3], bookInfo[1]);
-					bookPublisherMap.put(bookInfo[3], bookInfo[2]);
+				String[] bookInfo = line.split(",", 5);
+
+				if(bookISBNList.contains(bookInfo[3])){
+					System.out.println("this ISBN was already registed.");
+					continue;
 				}
-				System.out.println(bookInfo[0] + bookInfo[1] + bookInfo[2] + bookInfo[3] + bookInfo.length);
+				
+				if(bookInfo.length >= 4){
+					bookISBNList.add(bookInfo[3]);
+					bookList.add(new Book(bookInfo));
+				}
 			}
-			
 		} catch (Exception e) {
 			System.out.println(e.getMessage());
 		}
 	}
+
+	List<Book> getBookList(){
+		Collections.sort(bookList, new BookComparator());
+		return bookList;
+	}
+
+	void search(String[] word){
+		bookSearchedList.clear();
+
+		for(Book book : bookList){
+			if(book.isMatchs(word)){
+				bookSearchedList.add(book);
+			}
+		}
+	}
+
+	List<Book> getSearchedBookList(){
+		return bookSearchedList;
+	}
 	
 	boolean addBookInfo(String[] bookInfo) {
-		if(bookInfo.length != 4){
+		if(bookInfo.length < 4){
+			return false;
+		}
+
+		for(int i=0; i<4; ++i){
+			if(bookInfo[i].length() <= 0){
+				return false;
+			}
+		}
+
+		if(bookISBNList.contains(bookInfo[3])){
+			System.out.println("this ISBN was already registed.");
 			return false;
 		}
 		
 		FileWriter file;
-		
-		bookNameMap.put(bookInfo[3], bookInfo[0]);
-		bookAuthorMap.put(bookInfo[3], bookInfo[1]);
-		bookPublisherMap.put(bookInfo[3], bookInfo[2]);
+
+		bookISBNList.add(bookInfo[3]);
+		bookList.add(new Book(bookInfo));
 		
 		try {
-			file = new FileWriter(BOOK_TXT_PATH);
+			file = new FileWriter(BOOK_TXT_PATH, true);
 			
-			StringBuilder builder = new StringBuilder();
+			StringBuilder builder = new StringBuilder("\n");
 			for(String info : bookInfo){
 				builder.append(info);
 				builder.append(",");
@@ -72,7 +100,7 @@ public class BookModel {
 			file.write(builder.toString());
 			file.close();
 		} catch (Exception e) {
-			e.getMessage();
+			System.out.println(e.getMessage());
 			return false;
 		}
 		return true;
